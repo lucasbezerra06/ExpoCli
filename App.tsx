@@ -1,115 +1,96 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * Generated with the TypeScript template
- * https://github.com/react-native-community/react-native-template-typescript
- *
- * @format
- */
+import React, {useEffect, useState} from 'react';
+import {StyleSheet, Text, View, Button, ToastAndroid} from 'react-native';
+import {BarCodeScanner} from 'expo-barcode-scanner';
+import * as Clipboard from 'expo-clipboard';
 
-import React from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+export default function App() {
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [scanned, setScanned] = useState(false);
+  const [text, setText] = useState('Not yet scanned');
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-
-const Section: React.FC<{
-  title: string;
-}> = ({children, title}) => {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-};
-
-const App = () => {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const askForCameraPermission = async () => {
+    const {status} = await BarCodeScanner.requestPermissionsAsync();
+    setHasPermission(status === 'granted');
   };
 
+  useEffect(() => {
+    askForCameraPermission();
+  }, []);
+
+  const handleBarCodeScanned = ({type, data}: {type: string; data: string}) => {
+    setScanned(true);
+    setText(data);
+    console.log(`Type: ${type} \nData: ${data}`);
+  };
+
+  if (hasPermission === null) {
+    return (
+      <View style={styles.container}>
+        <Text>Requesting for camera permission</Text>
+      </View>
+    );
+  }
+
+  if (!hasPermission) {
+    return (
+      <View style={styles.container}>
+        <Text style={{margin: 10}}>No acess to camera</Text>
+        <Button title="Allow Camera" onPress={askForCameraPermission} />
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+    <View style={styles.container}>
+      <View style={styles.barcodebox}>
+        <BarCodeScanner
+          onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+          style={{height: 400, width: 400}}
+        />
+      </View>
+      <Text style={styles.maintext}>{text}</Text>
+
+      {scanned && (
+        <View>
+          <View style={{marginBottom: 5}}>
+            <Button
+              title="Scan again?"
+              onPress={() => setScanned(false)}
+              color="tomato"
+            />
+          </View>
+          <Button
+            title="Copy Code?"
+            onPress={() => {
+              ToastAndroid.show('code copied!', ToastAndroid.SHORT);
+              Clipboard.setString(text);
+            }}
+          />
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      )}
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  maintext: {
+    fontSize: 16,
+    margin: 20,
+    color: 'black',
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
+  barcodebox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 300,
+    width: 300,
+    overflow: 'hidden',
+    borderRadius: 30,
+    backgroundColor: 'tomato',
   },
 });
-
-export default App;
